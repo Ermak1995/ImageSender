@@ -11,5 +11,12 @@ services:
     command: server /data --console-address ":9001"
     volumes: 
       - minio_data:/data
+  tools:
+    image: alpine:latest
+    container_name: tools
+    depends_on:
+      - minio
+    entrypoint: ["sleep", "infinity"]
+
 volumes: 
   minio_data:
