@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package imageservice;
+
+service ImageService {
+  // Загрузка: клиент шлёт поток (первый пакет — метаданные, остальные — чанки)
+  rpc UploadImage (stream UploadRequest) returns (UploadResponse);
+
+  // Скачивание: сервер шлёт поток чанков
+  rpc DownloadImage (DownloadRequest) returns (stream DownloadResponse);
+
+  // Удаление
+  rpc DeleteImage (DeleteRequest) returns (DeleteResponse);
+
+  // Список изображений с опциональным фильтром по префиксу
+  rpc ListImages (ListRequest) returns (ListResponse);
+
+  // Метаданные одного изображения
+  rpc GetImageInfo (GetImageInfoRequest) returns (ImageInfo);
+}
+
+// Upload
+message UploadRequest {
+ oneof data {
+ ImageMetadata metadata = 1;
+ bytes chunk = 2;
+ }
+}
+
+message ImageMetadata {
+ string filename = 1;
+ string content_type = 2;
+}
+
+message UploadResponse {
+ string image_id = 1;
+ string message = 2;
+}
+
+// Download
+message DownloadRequest {string image_id = 1;}
+message DownloadResponse {bytes chunk = 1;}
+
+// Delete
+message DeleteRequest {string image_id = 1;}
+message DeleteResponse {
+ bool success = 1;
+ string message = 2;
+}
+
+// List
+message ListRequest {string prefix = 1;}
+message ListResponse {repeated ImageInfo images = 1;}
+
+// Info
+message GetImageInfoRequest {string image_id = 1;}
+
+message ImageInfo {
+  string image_id = 1;
+  string filename = 2;
+  int64 size_bytes = 3;
+  string content_type = 4;
+  string created_at = 5;
+}
