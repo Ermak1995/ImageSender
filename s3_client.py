@@ -31,6 +31,14 @@ class S3Client:
 
         return image_id
 
+    def download(self, image_id: str) -> bytes:
+        response = self.client.get_object(self.bucket, image_id)
+        try:
+            return response.read()
+        finally:
+            response.close()
+            response.release_conn()
+
     def object_exists(self, image_id: str) -> bool:
         try:
             self.client.stat_object(self.bucket, image_id)
@@ -56,3 +64,19 @@ class S3Client:
         if not self.object_exists(image_id):
             raise ValueError(f"Объект {image_id} не найден")
         self.client.remove_object(self.bucket, image_id)
+
+    def list_objects(self, prefix: str = "") -> list:
+        objects = self.client.list_objects(
+            self.bucket,
+            prefix=prefix if prefix else None
+        )
+        result = []
+        for obj in objects:
+            result.append({
+                "image_id": obj.object_name,
+                "filename": obj.object_name,  # имя достанем через get_info если нужно
+                "size_bytes": obj.size,
+                "content_type": obj.content_type or "application/octet-stream",
+                "created_at": obj.last_modified.isoformat() if obj.last_modified else "",
+            })
+        return result
