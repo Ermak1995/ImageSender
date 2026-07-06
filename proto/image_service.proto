@@ -49,7 +49,10 @@ message DeleteResponse {
 }
 
 // List
-message ListRequest {string prefix = 1;}
+message ListRequest {
+  string prefix = 1;
+  string filename = 2; // подстрока для фильтра по оригинальному имени файла
+}
 message ListResponse {repeated ImageInfo images = 1;}
 
 // Info

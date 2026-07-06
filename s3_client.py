@@ -65,18 +65,24 @@ class S3Client:
             raise ValueError(f"Объект {image_id} не найден")
         self.client.remove_object(self.bucket, image_id)
 
-    def list_objects(self, prefix: str = "") -> list:
+    def list_objects(self, prefix: str = "", filename_filter: str = "") -> list:
         objects = self.client.list_objects(
             self.bucket,
-            prefix=prefix if prefix else None
+            prefix=prefix if prefix else None,
+            include_user_meta=True,
         )
+        filename_filter = filename_filter.lower()
         result = []
         for obj in objects:
+            filename = obj.metadata.get("X-Amz-Meta-Filename", obj.object_name) if obj.metadata else obj.object_name
+            if filename_filter and filename_filter not in filename.lower():
+                continue
+            content_type = (obj.metadata.get("content-type") if obj.metadata else None) or "application/octet-stream"
             result.append({
                 "image_id": obj.object_name,
-                "filename": obj.object_name,  # имя достанем через get_info если нужно
+                "filename": filename,
                 "size_bytes": obj.size,
-                "content_type": obj.content_type or "application/octet-stream",
+                "content_type": content_type,
                 "created_at": obj.last_modified.isoformat() if obj.last_modified else "",
             })
         return result

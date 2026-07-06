@@ -74,7 +74,7 @@ class ImageServiceServicer(image_service_pb2_grpc.ImageServiceServicer):
  
     def ListImages(self, request, context):
         try:
-            objects = self.s3.list_objects(prefix=request.prefix)
+            objects = self.s3.list_objects(prefix=request.prefix, filename_filter=request.filename)
         except Exception as e:
             context.abort(grpc.StatusCode.INTERNAL, f"Ошибка получения списка: {e}")
             return

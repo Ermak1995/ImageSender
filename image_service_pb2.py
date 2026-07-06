@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13image_service.proto\x12\x0cimageservice\"Y\n\rUploadRequest\x12/\n\x08metadata\x18\x01 \x01(\x0b\x32\x1b.imageservice.ImageMetadataH\x00\x12\x0f\n\x05\x63hunk\x18\x02 \x01(\x0cH\x00\x42\x06\n\x04\x64\x61ta\"7\n\rImageMetadata\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x14\n\x0c\x63ontent_type\x18\x02 \x01(\t\"3\n\x0eUploadResponse\x12\x10\n\x08image_id\x18\x01 \x01(\t\x12\x0f\n\x07message\x18\x02 \x01(\t\"#\n\x0f\x44ownloadRequest\x12\x10\n\x08image_id\x18\x01 \x01(\t\"!\n\x10\x44ownloadResponse\x12\r\n\x05\x63hunk\x18\x01 \x01(\x0c\"!\n\rDeleteRequest\x12\x10\n\x08image_id\x18\x01 \x01(\t\"2\n\x0e\x44\x65leteResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"\x1d\n\x0bListRequest\x12\x0e\n\x06prefix\x18\x01 \x01(\t\"7\n\x0cListResponse\x12\'\n\x06images\x18\x01 \x03(\x0b\x32\x17.imageservice.ImageInfo\"\'\n\x13GetImageInfoRequest\x12\x10\n\x08image_id\x18\x01 \x01(\t\"m\n\tImageInfo\x12\x10\n\x08image_id\x18\x01 \x01(\t\x12\x10\n\x08\x66ilename\x18\x02 \x01(\t\x12\x12\n\nsize_bytes\x18\x03 \x01(\x03\x12\x14\n\x0c\x63ontent_type\x18\x04 \x01(\t\x12\x12\n\ncreated_at\x18\x05 \x01(\t2\x87\x03\n\x0cImageService\x12J\n\x0bUploadImage\x12\x1b.imageservice.UploadRequest\x1a\x1c.imageservice.UploadResponse(\x01\x12P\n\rDownloadImage\x12\x1d.imageservice.DownloadRequest\x1a\x1e.imageservice.DownloadResponse0\x01\x12H\n\x0b\x44\x65leteImage\x12\x1b.imageservice.DeleteRequest\x1a\x1c.imageservice.DeleteResponse\x12\x43\n\nListImages\x12\x19.imageservice.ListRequest\x1a\x1a.imageservice.ListResponse\x12J\n\x0cGetImageInfo\x12!.imageservice.GetImageInfoRequest\x1a\x17.imageservice.ImageInfob\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13image_service.proto\x12\x0cimageservice\"Y\n\rUploadRequest\x12/\n\x08metadata\x18\x01 \x01(\x0b\x32\x1b.imageservice.ImageMetadataH\x00\x12\x0f\n\x05\x63hunk\x18\x02 \x01(\x0cH\x00\x42\x06\n\x04\x64\x61ta\"7\n\rImageMetadata\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x14\n\x0c\x63ontent_type\x18\x02 \x01(\t\"3\n\x0eUploadResponse\x12\x10\n\x08image_id\x18\x01 \x01(\t\x12\x0f\n\x07message\x18\x02 \x01(\t\"#\n\x0f\x44ownloadRequest\x12\x10\n\x08image_id\x18\x01 \x01(\t\"!\n\x10\x44ownloadResponse\x12\r\n\x05\x63hunk\x18\x01 \x01(\x0c\"!\n\rDeleteRequest\x12\x10\n\x08image_id\x18\x01 \x01(\t\"2\n\x0e\x44\x65leteResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"/\n\x0bListRequest\x12\x0e\n\x06prefix\x18\x01 \x01(\t\x12\x10\n\x08\x66ilename\x18\x02 \x01(\t\"7\n\x0cListResponse\x12\'\n\x06images\x18\x01 \x03(\x0b\x32\x17.imageservice.ImageInfo\"\'\n\x13GetImageInfoRequest\x12\x10\n\x08image_id\x18\x01 \x01(\t\"m\n\tImageInfo\x12\x10\n\x08image_id\x18\x01 \x01(\t\x12\x10\n\x08\x66ilename\x18\x02 \x01(\t\x12\x12\n\nsize_bytes\x18\x03 \x01(\x03\x12\x14\n\x0c\x63ontent_type\x18\x04 \x01(\t\x12\x12\n\ncreated_at\x18\x05 \x01(\t2\x87\x03\n\x0cImageService\x12J\n\x0bUploadImage\x12\x1b.imageservice.UploadRequest\x1a\x1c.imageservice.UploadResponse(\x01\x12P\n\rDownloadImage\x12\x1d.imageservice.DownloadRequest\x1a\x1e.imageservice.DownloadResponse0\x01\x12H\n\x0b\x44\x65leteImage\x12\x1b.imageservice.DeleteRequest\x1a\x1c.imageservice.DeleteResponse\x12\x43\n\nListImages\x12\x19.imageservice.ListRequest\x1a\x1a.imageservice.ListResponse\x12J\n\x0cGetImageInfo\x12!.imageservice.GetImageInfoRequest\x1a\x17.imageservice.ImageInfob\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -46,13 +46,13 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_DELETERESPONSE']._serialized_start=345
   _globals['_DELETERESPONSE']._serialized_end=395
   _globals['_LISTREQUEST']._serialized_start=397
-  _globals['_LISTREQUEST']._serialized_end=426
-  _globals['_LISTRESPONSE']._serialized_start=428
-  _globals['_LISTRESPONSE']._serialized_end=483
-  _globals['_GETIMAGEINFOREQUEST']._serialized_start=485
-  _globals['_GETIMAGEINFOREQUEST']._serialized_end=524
-  _globals['_IMAGEINFO']._serialized_start=526
-  _globals['_IMAGEINFO']._serialized_end=635
-  _globals['_IMAGESERVICE']._serialized_start=638
-  _globals['_IMAGESERVICE']._serialized_end=1029
+  _globals['_LISTREQUEST']._serialized_end=444
+  _globals['_LISTRESPONSE']._serialized_start=446
+  _globals['_LISTRESPONSE']._serialized_end=501
+  _globals['_GETIMAGEINFOREQUEST']._serialized_start=503
+  _globals['_GETIMAGEINFOREQUEST']._serialized_end=542
+  _globals['_IMAGEINFO']._serialized_start=544
+  _globals['_IMAGEINFO']._serialized_end=653
+  _globals['_IMAGESERVICE']._serialized_start=656
+  _globals['_IMAGESERVICE']._serialized_end=1047
 # @@protoc_insertion_point(module_scope)

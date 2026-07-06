@@ -48,10 +48,10 @@ def upload(stub):
 
 
 def list_images(stub):
-    # prefix = input("Префикс фильтра (пусто — все): ").strip()
+    filename_filter = input("Фильтр по имени файла (пусто — все): ").strip()
 
     try:
-        response = stub.ListImages(pb2.ListRequest(prefix=''))
+        response = stub.ListImages(pb2.ListRequest(filename=filename_filter))
         print(f"\nНайдено: {len(response.images)}")
         for i, img in enumerate(response.images, start=1):
             print(f"\n--- #{i} ---")
