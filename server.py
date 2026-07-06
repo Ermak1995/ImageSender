@@ -1,4 +1,7 @@
+import os
+
 import grpc
+from dotenv import load_dotenv
 from minio import S3Error
 
 import image_service_pb2
@@ -6,6 +9,8 @@ import image_service_pb2_grpc
 
 from concurrent import futures
 from s3_client import S3Client
+
+load_dotenv()
 
 
 class ImageServiceServicer(image_service_pb2_grpc.ImageServiceServicer):
@@ -104,7 +109,12 @@ class ImageServiceServicer(image_service_pb2_grpc.ImageServiceServicer):
 
 
 def serve():
-    s3 = S3Client("localhost:9000", "admin", "password12345", "images")
+    s3 = S3Client(
+        os.environ["MINIO_ENDPOINT"],
+        os.environ["MINIO_ROOT_USER"],
+        os.environ["MINIO_ROOT_PASSWORD"],
+        os.environ["MINIO_BUCKET"],
+    )
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     image_service_pb2_grpc.add_ImageServiceServicer_to_server(ImageServiceServicer(s3), server)
     server.add_insecure_port("[::]:50051")

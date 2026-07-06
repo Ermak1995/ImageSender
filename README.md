@@ -34,16 +34,24 @@ cd ImageSender
 **2. Установить зависимости**
 
 ```bash
-pip install grpcio minio grpcio-tools
+pip install -r requirements.txt
 ```
 
-**3. Запустить MinIO**
+**3. Настроить переменные окружения**
+
+```bash
+cp .env.example .env
+```
+
+Открой `.env` и задай свои значения `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` (файл `.env` в `.gitignore` и не попадает в репозиторий).
+
+**4. Запустить MinIO**
 
 ```bash
 docker compose up -d
 ```
 
-**4. Запустить gRPC-сервер**
+**5. Запустить gRPC-сервер**
 
 ```bash
 python server.py
@@ -51,7 +59,7 @@ python server.py
 
 Сервер запустится на порту `50051` и автоматически создаст бакет `images` в MinIO.
 
-**5. Запустить клиент** (в отдельном терминале)
+**6. Запустить клиент** (в отдельном терминале)
 
 ```bash
 python client.py
@@ -96,14 +104,20 @@ python client.py
 | gRPC сервер | 50051 | API для клиента |
 
 **MinIO консоль:** http://localhost:9001  
-Логин: `admin` / Пароль: `password12345`
+Логин и пароль задаются в `.env` (см. `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD`).
 
-## Переменные окружения (клиент)
+## Переменные окружения
+
+Заданы в `.env` (создаётся из `.env.example`).
 
 | Переменная | По умолчанию | Описание |
 |------------|--------------|----------|
-| `GRPC_HOST` | `localhost` | Хост gRPC-сервера |
-| `GRPC_PORT` | `50051` | Порт gRPC-сервера |
+| `MINIO_ROOT_USER` | — | Логин MinIO |
+| `MINIO_ROOT_PASSWORD` | — | Пароль MinIO |
+| `MINIO_ENDPOINT` | `localhost:9000` | Адрес MinIO API |
+| `MINIO_BUCKET` | `images` | Название бакета |
+| `GRPC_HOST` | `localhost` | Хост gRPC-сервера (клиент) |
+| `GRPC_PORT` | `50051` | Порт gRPC-сервера (клиент) |
 
 ## gRPC API
 
