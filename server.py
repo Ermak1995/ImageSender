@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 
 import grpc
 from dotenv import load_dotenv
@@ -99,7 +100,7 @@ class ImageServiceServicer(image_service_pb2_grpc.ImageServiceServicer):
     def GetImageInfo(self, request, context):
         try:
             info = self.s3.get_info(request.image_id)
-        except S3Error:
+        except (S3Error, ValueError):
             context.abort(grpc.StatusCode.NOT_FOUND, f"Файл не найден: {request.image_id}")
             return
  
@@ -112,16 +113,33 @@ class ImageServiceServicer(image_service_pb2_grpc.ImageServiceServicer):
         )
 
 
+def connect_s3(retries: int = 30, delay: float = 2.0) -> S3Client:
+    """Подключиться к MinIO с повторами.
+
+    В docker-compose контейнер сервера может стартовать раньше, чем MinIO
+    начнёт принимать соединения, поэтому пробуем несколько раз.
+    """
+    last_err = None
+    for attempt in range(1, retries + 1):
+        try:
+            return S3Client(
+                os.environ["MINIO_ENDPOINT"],
+                os.environ["MINIO_ROOT_USER"],
+                os.environ["MINIO_ROOT_PASSWORD"],
+                os.environ["MINIO_BUCKET"],
+                max_bytes=int(os.environ.get("MINIO_MAX_BYTES", "0")),
+                warn_threshold=float(os.environ.get("MINIO_WARN_THRESHOLD", "0.8")),
+            )
+        except Exception as e:
+            last_err = e
+            logging.warning("MinIO недоступен (попытка %d/%d): %s", attempt, retries, e)
+            time.sleep(delay)
+    raise RuntimeError(f"Не удалось подключиться к MinIO за {retries} попыток: {last_err}")
+
+
 def serve():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    s3 = S3Client(
-        os.environ["MINIO_ENDPOINT"],
-        os.environ["MINIO_ROOT_USER"],
-        os.environ["MINIO_ROOT_PASSWORD"],
-        os.environ["MINIO_BUCKET"],
-        max_bytes=int(os.environ.get("MINIO_MAX_BYTES", "0")),
-        warn_threshold=float(os.environ.get("MINIO_WARN_THRESHOLD", "0.8")),
-    )
+    s3 = connect_s3()
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     image_service_pb2_grpc.add_ImageServiceServicer_to_server(ImageServiceServicer(s3), server)
     server.add_insecure_port("[::]:50051")
