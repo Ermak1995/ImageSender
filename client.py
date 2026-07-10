@@ -5,7 +5,29 @@ import image_service_pb2_grpc as pb2_grpc
 
 GRPC_HOST = os.getenv("GRPC_HOST", "localhost")
 GRPC_PORT = os.getenv("GRPC_PORT", "50051")
+# В docker-compose сюда примонтирован хостовый проект (см. docker-compose.yml),
+# чтобы относительные пути вида "test_photos/photo.png" находили файл и внутри контейнера.
+DATA_DIR = os.getenv("DATA_DIR", "")
+# Абсолютный путь до корня проекта на хосте — нужен, чтобы транслировать
+# абсолютные хостовые пути (например, /home/user/project/photo.png) в
+# путь внутри контейнера, т.к. контейнер видит только смонтированные директории,
+# а не всю файловую систему хоста.
+HOST_PROJECT_DIR = os.getenv("HOST_PROJECT_DIR", "")
+# Домашняя директория хоста, примонтированная в контейнер только для чтения
+# (см. docker-compose.yml) — позволяет загружать файлы из произвольных мест
+# на хосте (например, /home/user/screen.png), не копируя их в проект.
+HOME_DIR = os.getenv("HOME_DIR", "")
+HOST_HOME_DIR = os.getenv("HOST_HOME_DIR", "")
 CHUNK_SIZE = 256 * 1024  # 256 KB
+
+# Пары (директория на хосте, точка монтирования в контейнере). Порядок важен:
+# сначала проверяется более специфичная директория (проект), чтобы пути внутри
+# неё транслировались в доступный для записи /data, а не в read-only домашний
+# маунт, в который проект тоже, как правило, вложен.
+PATH_MOUNTS = [
+    (HOST_PROJECT_DIR, DATA_DIR),
+    (HOST_HOME_DIR, HOME_DIR),
+]
 
 CONTENT_TYPES = {
     ".jpg": "image/jpeg",
@@ -15,9 +37,30 @@ CONTENT_TYPES = {
     ".webp": "image/webp",
 }
 
+# Папка по умолчанию для скачивания, если пользователь ничего не ввёл —
+# относительный путь, проходит через resolve_path() как обычный ввод.
+DEFAULT_DOWNLOAD_DIR = "downloads"
+
+
+def resolve_path(path):
+    if not DATA_DIR:
+        return path
+
+    if not os.path.isabs(path):
+        return os.path.join(DATA_DIR, path)
+
+    for host_dir, container_dir in PATH_MOUNTS:
+        if not host_dir or not container_dir:
+            continue
+        rel = os.path.relpath(path, host_dir)
+        if rel != os.pardir and not rel.startswith(os.pardir + os.sep):
+            return os.path.join(container_dir, rel)
+
+    return path
+
 
 def upload(stub):
-    filepath = input("Путь к файлу: ").strip()
+    filepath = resolve_path(input("Путь к файлу: ").strip())
 
     if not os.path.exists(filepath):
         print(f"Файл не найден: {filepath}")
@@ -66,15 +109,30 @@ def list_images(stub):
 
 def download(stub):
     image_id = input("image_id: ").strip()
-    save_path = input("Куда сохранить (например: /tmp/photo.jpg): ").strip()
+    save_path = input(
+        f"Куда сохранить (Enter — сохранить в {DEFAULT_DOWNLOAD_DIR}/ под исходным именем): "
+    ).strip()
+
+    if not save_path:
+        try:
+            info = stub.GetImageInfo(pb2.GetImageInfoRequest(image_id=image_id))
+        except grpc.RpcError as e:
+            print(f"Ошибка: {e.code()} — {e.details()}")
+            return
+        save_path = os.path.join(DEFAULT_DOWNLOAD_DIR, info.filename)
+
+    save_path = resolve_path(save_path)
 
     try:
+        os.makedirs(os.path.dirname(save_path) or ".", exist_ok=True)
         with open(save_path, "wb") as f:
             for chunk in stub.DownloadImage(pb2.DownloadRequest(image_id=image_id)):
                 f.write(chunk.chunk)
         print(f"Сохранено: {save_path}")
     except grpc.RpcError as e:
         print(f"Ошибка: {e.code()} — {e.details()}")
+    except OSError as e:
+        print(f"Ошибка записи файла: {e}")
 
 
 def delete(stub):
