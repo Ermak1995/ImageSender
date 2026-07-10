@@ -1,3 +1,4 @@
+import logging
 import os
 
 import grpc
@@ -8,7 +9,7 @@ import image_service_pb2
 import image_service_pb2_grpc
 
 from concurrent import futures
-from s3_client import S3Client
+from s3_client import S3Client, StorageQuotaExceeded
 
 load_dotenv()
 
@@ -44,6 +45,9 @@ class ImageServiceServicer(image_service_pb2_grpc.ImageServiceServicer):
         # Загружаем в MinIO
         try:
             image_id = self.s3.upload(metadata.filename, metadata.content_type, data)
+        except StorageQuotaExceeded as e:
+            context.abort(grpc.StatusCode.RESOURCE_EXHAUSTED, str(e))
+            return
         except Exception as e:
             context.abort(grpc.StatusCode.INTERNAL, f"Ошибка загрузки: {e}")
             return
@@ -109,11 +113,14 @@ class ImageServiceServicer(image_service_pb2_grpc.ImageServiceServicer):
 
 
 def serve():
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     s3 = S3Client(
         os.environ["MINIO_ENDPOINT"],
         os.environ["MINIO_ROOT_USER"],
         os.environ["MINIO_ROOT_PASSWORD"],
         os.environ["MINIO_BUCKET"],
+        max_bytes=int(os.environ.get("MINIO_MAX_BYTES", "0")),
+        warn_threshold=float(os.environ.get("MINIO_WARN_THRESHOLD", "0.8")),
     )
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     image_service_pb2_grpc.add_ImageServiceServicer_to_server(ImageServiceServicer(s3), server)

@@ -1,12 +1,24 @@
+import logging
 import uuid
 from io import BytesIO
 
 from minio import Minio
 
+logger = logging.getLogger("s3_client")
+
+
+class StorageQuotaExceeded(Exception):
+    """Загрузка отклонена: превышен лимит хранилища бакета."""
+
 
 class S3Client:
-    def __init__(self, endpoint, access_key, secret_key, bucket_name):
+    def __init__(self, endpoint, access_key, secret_key, bucket_name,
+                 max_bytes: int = 0, warn_threshold: float = 0.8):
         self.bucket = bucket_name
+        # 0 (или меньше) — лимит выключен, бакет может расти без ограничений
+        self.max_bytes = max_bytes if max_bytes and max_bytes > 0 else 0
+        # доля лимита, при достижении которой начинаем предупреждать (0..1)
+        self.warn_threshold = min(max(warn_threshold, 0.0), 1.0)
         self.client = Minio(endpoint=endpoint,
                             access_key=access_key,
                             secret_key=secret_key,
@@ -17,7 +29,50 @@ class S3Client:
         else:
             print(f"[S3] Бакет уже существует: {self.bucket}")
 
+        if self.max_bytes:
+            print(f"[S3] Лимит хранилища: {self.max_bytes} байт "
+                  f"(предупреждение при {int(self.warn_threshold * 100)}%)")
+        else:
+            print("[S3] Лимит хранилища не задан — бакет может расти без ограничений")
+
+    def total_size(self) -> int:
+        """Суммарный размер всех объектов в бакете (в байтах)."""
+        return sum(
+            obj.size or 0
+            for obj in self.client.list_objects(self.bucket, recursive=True)
+        )
+
+    def _check_quota(self, incoming: int) -> None:
+        """Проверить, поместится ли новый объект в лимит.
+
+        Кидает StorageQuotaExceeded при превышении лимита и пишет warning
+        при приближении к нему.
+        """
+        if not self.max_bytes:
+            return
+
+        current = self.total_size()
+        projected = current + incoming
+
+        if projected > self.max_bytes:
+            logger.warning(
+                "[S3] Лимит хранилища превышен: %d + %d = %d > %d байт. Загрузка отклонена.",
+                current, incoming, projected, self.max_bytes,
+            )
+            raise StorageQuotaExceeded(
+                f"Превышен лимит хранилища: {projected} > {self.max_bytes} байт"
+            )
+
+        if projected >= self.max_bytes * self.warn_threshold:
+            logger.warning(
+                "[S3] Хранилище заполнено на %.1f%% (%d из %d байт), приближается к лимиту.",
+                projected / self.max_bytes * 100, projected, self.max_bytes,
+            )
+
     def upload(self, filename: str, content_type: str, data: bytes) -> str:
+        # Не даём бакету бесконечно разрастаться: проверяем лимит до записи
+        self._check_quota(len(data))
+
         image_id = str(uuid.uuid4())  # генерируем уникальный ключ
 
         self.client.put_object(
