@@ -1,3 +1,10 @@
+# Дефолты ниже позволяют поднять стек сразу после клонирования: `docker compose up`
+# работает без .env. Файл .env (см. .env.example) нужен только чтобы переопределить
+# значения по умолчанию, например задать свои креды MinIO.
+x-minio-credentials: &minio-credentials
+  MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+  MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+
 services:
   minio:
     image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
@@ -6,27 +13,51 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      <<: *minio-credentials
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   grpc:
     build: .
     container_name: imagesender-grpc
     depends_on:
-      - minio
+      minio:
+        condition: service_healthy
     ports:
       - "50051:50051"
     environment:
+      <<: *minio-credentials
       # Внутри docker-сети MinIO доступен по имени сервиса, а не localhost
       MINIO_ENDPOINT: minio:9000
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_BUCKET: ${MINIO_BUCKET:-images}
       MINIO_MAX_BYTES: ${MINIO_MAX_BYTES:-0}
       MINIO_WARN_THRESHOLD: ${MINIO_WARN_THRESHOLD:-0.8}
+
+  client:
+    build: .
+    container_name: imagesender-client
+    # Интерактивный CLI — в общий `docker compose up` не поднимается,
+    # запускается отдельно: `docker compose run --rm client`
+    profiles: ["cli"]
+    depends_on:
+      - grpc
+    environment:
+      GRPC_HOST: grpc
+      GRPC_PORT: 50051
+    # Монтируем проект в /data, чтобы пути к файлам на хосте (например,
+    # test_photos/photo.png) были доступны в контейнере как /data/test_photos/photo.png
+    volumes:
+      - .:/data:z
+    stdin_open: true
+    tty: true
+    command: ["python", "client.py"]
 
 volumes:
   minio_data:

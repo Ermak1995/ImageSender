@@ -22,7 +22,7 @@ MinIO и gRPC-сервер поднимаются одной командой `d
 ## Требования
 
 - Docker + Docker Compose
-- Python 3.10+ — только для клиента `client.py` (сервер живёт в контейнере)
+- Python 3.10+ — опционально, только если хочешь запускать клиент `client.py` локально, а не через `docker compose run client`
 
 ## Быстрый старт (Docker)
 
@@ -33,25 +33,33 @@ git clone https://github.com/Ermak1995/ImageSender.git
 cd ImageSender
 ```
 
-**2. Настроить переменные окружения**
-
-```bash
-cp .env.example .env
-```
-
-Открой `.env` и задай свои значения `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` (файл `.env` в `.gitignore` и не попадает в репозиторий).
-
-**3. Поднять MinIO + gRPC-сервер**
+**2. Поднять MinIO + gRPC-сервер**
 
 ```bash
 docker compose up -d --build
 ```
 
-Поднимутся оба сервиса: MinIO и gRPC-сервер на порту `50051`. Сервер сам дождётся готовности MinIO и создаст бакет `images`.
+Поднимутся оба сервиса: MinIO (с дефолтными кредами `minioadmin` / `minioadmin123`) и gRPC-сервер на порту `50051`. gRPC-контейнер стартует только после того, как MinIO пройдёт healthcheck, и сам создаст бакет `images`. Никакой `.env` для первого запуска не нужен.
+
+**3. (Опционально) задать свои переменные окружения**
+
+```bash
+cp .env.example .env
+```
+
+Открой `.env` и поменяй `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` и другие значения при необходимости (файл `.env` в `.gitignore` и не попадает в репозиторий). После правки перезапусти: `docker compose up -d --build`.
 
 **4. Запустить клиент**
 
-Клиент интерактивный, поэтому запускается локально:
+Вариант A — через Docker, без установки зависимостей на хосте:
+
+```bash
+docker compose run --rm client
+```
+
+Клиент подключится к контейнеру `grpc` внутри docker-сети. Проект монтируется в контейнер по пути `/data`, поэтому пути к файлам на хосте нужно указывать относительно него, например: `/data/test_photos/photo.png`. Для скачивания сохраняй файлы туда же (например: `/data/downloaded.jpg`), чтобы результат оказался на хосте, а не только внутри контейнера.
+
+Вариант B — локально, если Python уже установлен:
 
 ```bash
 pip install -r requirements.txt
@@ -109,16 +117,16 @@ python server.py
 | gRPC сервер | 50051 | API для клиента |
 
 **MinIO консоль:** http://localhost:9001  
-Логин и пароль задаются в `.env` (см. `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD`).
+Логин/пароль по умолчанию — `minioadmin` / `minioadmin123`, переопределяются через `.env` (см. `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD`).
 
 ## Переменные окружения
 
-Заданы в `.env` (создаётся из `.env.example`).
+Все переменные опциональны и переопределяются через `.env` (создаётся из `.env.example`); без него используются дефолты из `docker-compose.yml`.
 
 | Переменная | По умолчанию | Описание |
 |------------|--------------|----------|
-| `MINIO_ROOT_USER` | — | Логин MinIO |
-| `MINIO_ROOT_PASSWORD` | — | Пароль MinIO |
+| `MINIO_ROOT_USER` | `minioadmin` | Логин MinIO |
+| `MINIO_ROOT_PASSWORD` | `minioadmin123` | Пароль MinIO |
 | `MINIO_ENDPOINT` | `localhost:9000` | Адрес MinIO API (в docker-compose переопределяется на `minio:9000`) |
 | `MINIO_BUCKET` | `images` | Название бакета |
 | `MINIO_MAX_BYTES` | `0` | Лимит суммарного размера бакета в байтах (`0` — без лимита) |
